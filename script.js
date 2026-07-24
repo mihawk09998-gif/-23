@@ -1,4 +1,4 @@
-// Programmed Love - 3D Heart Engine with WebRTC & URL Parameter Sync
+// Programmed Love - 3D Heart Engine with Cloud Server API Live Sync
 
 class HeartEngine {
     constructor() {
@@ -13,14 +13,6 @@ class HeartEngine {
         this.density = 450;
         this.showStars = true;
         this.audioEnabled = false;
-
-        // PeerJS P2P Room ID
-        this.roomId = 'salih-3d-heart-room-v1';
-        this.peer = null;
-        this.connections = [];
-
-        // Load state: priority URL Params > LocalStorage > Defaults
-        this.loadSettings();
 
         // 3D View Camera State
         this.angleX = 0.2;
@@ -45,7 +37,7 @@ class HeartEngine {
         this.init();
     }
 
-    init() {
+    async init() {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
@@ -53,63 +45,43 @@ class HeartEngine {
         this.rebuildHeartPoints();
         this.bindCanvasControls();
 
+        // 1. Load state from Cloud Server
+        await this.fetchServerState();
+
         if (this.isAdmin) {
             this.bindAdminEvents();
-            this.initAdminP2PHost();
         } else {
-            this.initViewerP2PClient();
+            // Polling for live updates on viewers/phones
+            setInterval(() => this.fetchServerState(), 1500);
         }
-
-        this.listenForStorageChanges();
 
         // Start animation loop
         requestAnimationFrame((t) => this.render(t));
     }
 
-    loadSettings() {
-        // 1. Check URL Parameters first
-        const urlParams = new URLSearchParams(window.location.search);
-
-        let hasUrlParam = false;
-        if (urlParams.has('t')) { this.displayText = urlParams.get('t'); hasUrlParam = true; }
-        if (urlParams.has('c')) { this.colorTheme = urlParams.get('c'); hasUrlParam = true; }
-        if (urlParams.has('s')) { this.rotationSpeed = parseFloat(urlParams.get('s')); hasUrlParam = true; }
-        if (urlParams.has('d')) { this.density = parseInt(urlParams.get('d')); hasUrlParam = true; }
-        if (urlParams.has('st')) { this.showStars = urlParams.get('st') === '1'; hasUrlParam = true; }
-
-        if (hasUrlParam) return;
-
-        // 2. Fallback to localStorage
+    async fetchServerState() {
         try {
-            const savedText = localStorage.getItem('heart_text');
-            if (savedText) this.displayText = savedText;
-
-            const savedColor = localStorage.getItem('heart_color');
-            if (savedColor) this.colorTheme = savedColor;
-
-            const savedSpeed = localStorage.getItem('heart_speed');
-            if (savedSpeed) this.rotationSpeed = parseFloat(savedSpeed);
-
-            const savedDensity = localStorage.getItem('heart_density');
-            if (savedDensity) this.density = parseInt(savedDensity);
-
-            const savedStars = localStorage.getItem('heart_stars');
-            if (savedStars !== null) this.showStars = savedStars === 'true';
-
-            const savedAudio = localStorage.getItem('heart_audio');
-            if (savedAudio !== null) this.audioEnabled = savedAudio === 'true';
+            const res = await fetch('/api/state?t=' + Date.now());
+            if (res.ok) {
+                const data = await res.json();
+                this.applyStatePayload(data);
+            }
         } catch (e) {
-            console.warn("LocalStorage access error:", e);
+            console.warn("Could not fetch server state:", e);
         }
     }
 
-    saveSetting(key, val) {
+    async pushServerState() {
+        const payload = this.getStatePayload();
         try {
-            localStorage.setItem(key, val);
+            await fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
         } catch (e) {
-            console.warn("LocalStorage save error:", e);
+            console.warn("Could not push server state:", e);
         }
-        this.broadcastStateToPeers();
     }
 
     getStatePayload() {
@@ -124,101 +96,38 @@ class HeartEngine {
     }
 
     applyStatePayload(payload) {
-        if (payload.t !== undefined) this.displayText = payload.t;
-        if (payload.c !== undefined) this.colorTheme = payload.c;
+        let densityChanged = false;
+
+        if (payload.t !== undefined && payload.t !== this.displayText) {
+            this.displayText = payload.t;
+        }
+        if (payload.c !== undefined && payload.c !== this.colorTheme) {
+            this.colorTheme = payload.c;
+            if (this.isAdmin) this.updateColorPresetUI();
+        }
         if (payload.s !== undefined) this.rotationSpeed = payload.s;
         if (payload.st !== undefined) this.showStars = payload.st;
         if (payload.a !== undefined) this.audioEnabled = payload.a;
         if (payload.d !== undefined && payload.d !== this.density) {
             this.density = payload.d;
+            densityChanged = true;
+        }
+
+        if (densityChanged) {
             this.rebuildHeartPoints();
         }
-    }
 
-    // WebRTC PeerJS Admin Host Setup
-    initAdminP2PHost() {
-        if (typeof Peer === 'undefined') return;
-
-        const badge = document.getElementById('statusBadge');
-
-        try {
-            this.peer = new Peer(this.roomId);
-
-            this.peer.on('open', (id) => {
-                if (badge) badge.innerHTML = `🌐 Онлайн-комната открыта | Подключено устройств: 0`;
-            });
-
-            this.peer.on('connection', (conn) => {
-                this.connections.push(conn);
-                if (badge) badge.innerHTML = `🟢 Онлайн-комната активна | Подключено устройств: ${this.connections.length}`;
-
-                conn.on('open', () => {
-                    conn.send(this.getStatePayload());
-                });
-
-                conn.on('close', () => {
-                    this.connections = this.connections.filter(c => c !== conn);
-                    if (badge) badge.innerHTML = `🟢 Онлайн-комната активна | Подключено устройств: ${this.connections.length}`;
-                });
-            });
-
-            this.peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    // Host already active elsewhere
-                    if (badge) badge.innerHTML = `⚡ Подключено к активной админ-сессии`;
-                }
-            });
-        } catch (e) {
-            console.warn("PeerJS init error:", e);
+        if (this.isAdmin) {
+            this.syncAdminUI();
         }
     }
 
-    // WebRTC PeerJS Viewer Client Setup
-    initViewerP2PClient() {
-        if (typeof Peer === 'undefined') return;
-
-        try {
-            this.peer = new Peer();
-
-            this.peer.on('open', () => {
-                const conn = this.peer.connect(this.roomId);
-
-                conn.on('open', () => {
-                    console.log("Connected to Admin P2P Host");
-                });
-
-                conn.on('data', (data) => {
-                    this.applyStatePayload(data);
-                });
-            });
-        } catch (e) {
-            console.warn("PeerJS client error:", e);
-        }
-    }
-
-    broadcastStateToPeers() {
-        const payload = this.getStatePayload();
-        this.connections.forEach(conn => {
-            if (conn.open) {
-                conn.send(payload);
-            }
-        });
-    }
-
-    listenForStorageChanges() {
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'heart_text') this.displayText = e.newValue || "i love you";
-            if (e.key === 'heart_color') this.colorTheme = e.newValue || "#ff4d8d";
-            if (e.key === 'heart_speed') this.rotationSpeed = parseFloat(e.newValue || 1.0);
-            if (e.key === 'heart_stars') this.showStars = e.newValue === 'true';
-            if (e.key === 'heart_audio') this.audioEnabled = e.newValue === 'true';
-            if (e.key === 'heart_density') {
-                this.density = parseInt(e.newValue || 450);
-                this.rebuildHeartPoints();
-            }
-
-            if (this.isAdmin) {
-                this.syncAdminUI();
+    updateColorPresetUI() {
+        document.querySelectorAll('.color-preset').forEach(btn => {
+            if (btn.getAttribute('data-color') === this.colorTheme) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
             }
         });
     }
@@ -232,7 +141,7 @@ class HeartEngine {
         const starsToggle = document.getElementById('starsToggle');
         const audioToggle = document.getElementById('audioToggle');
 
-        if (textInput) textInput.value = this.displayText;
+        if (textInput && document.activeElement !== textInput) textInput.value = this.displayText;
         if (speedRange) speedRange.value = this.rotationSpeed;
         if (speedVal) speedVal.textContent = `${this.rotationSpeed.toFixed(1)}x`;
         if (densityRange) densityRange.value = this.density;
@@ -240,13 +149,7 @@ class HeartEngine {
         if (starsToggle) starsToggle.checked = this.showStars;
         if (audioToggle) audioToggle.checked = this.audioEnabled;
 
-        document.querySelectorAll('.color-preset').forEach(btn => {
-            if (btn.getAttribute('data-color') === this.colorTheme) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
+        this.updateColorPresetUI();
     }
 
     resize() {
@@ -311,20 +214,25 @@ class HeartEngine {
         const copyShareUrlBtn = document.getElementById('copyShareUrlBtn');
         const togglePanelBtn = document.getElementById('togglePanelBtn');
         const controlsPanel = document.getElementById('controlsPanel');
+        const statusBadge = document.getElementById('statusBadge');
+
+        if (statusBadge) {
+            statusBadge.innerHTML = "🟢 Облачная синхронизация активна";
+        }
 
         this.syncAdminUI();
 
         // Text input change
         textInput.addEventListener('input', (e) => {
             this.displayText = e.target.value || "i love you";
-            this.saveSetting('heart_text', this.displayText);
+            this.pushServerState();
         });
 
         // Speed slider
         speedRange.addEventListener('input', (e) => {
             this.rotationSpeed = parseFloat(e.target.value);
             speedVal.textContent = `${this.rotationSpeed.toFixed(1)}x`;
-            this.saveSetting('heart_speed', this.rotationSpeed);
+            this.pushServerState();
         });
 
         // Density slider
@@ -332,7 +240,7 @@ class HeartEngine {
             this.density = parseInt(e.target.value);
             densityVal.textContent = this.density;
             this.rebuildHeartPoints();
-            this.saveSetting('heart_density', this.density);
+            this.pushServerState();
         });
 
         // Color Presets
@@ -341,19 +249,19 @@ class HeartEngine {
                 document.querySelectorAll('.color-preset').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.colorTheme = btn.getAttribute('data-color');
-                this.saveSetting('heart_color', this.colorTheme);
+                this.pushServerState();
             });
         });
 
         // Toggles
         starsToggle.addEventListener('change', (e) => {
             this.showStars = e.target.checked;
-            this.saveSetting('heart_stars', this.showStars);
+            this.pushServerState();
         });
 
         audioToggle.addEventListener('change', (e) => {
             this.audioEnabled = e.target.checked;
-            this.saveSetting('heart_audio', this.audioEnabled);
+            this.pushServerState();
             if (this.audioEnabled && !this.audioCtx) {
                 this.initAudio();
             }
@@ -362,16 +270,14 @@ class HeartEngine {
         // Open Viewer Window
         if (openViewerBtn) {
             openViewerBtn.addEventListener('click', () => {
-                window.open('index.html', '_blank');
+                window.open('/', '_blank');
             });
         }
 
         // Copy Share URL for Phone
         if (copyShareUrlBtn) {
             copyShareUrlBtn.addEventListener('click', () => {
-                const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', '') + 'index.html';
-                const shareUrl = `${baseUrl}?t=${encodeURIComponent(this.displayText)}&c=${encodeURIComponent(this.colorTheme)}&s=${this.rotationSpeed}&d=${this.density}&st=${this.showStars ? 1 : 0}`;
-
+                const shareUrl = window.location.origin + '/';
                 navigator.clipboard.writeText(shareUrl).then(() => {
                     const origText = copyShareUrlBtn.textContent;
                     copyShareUrlBtn.textContent = "✅ Ссылка скопирована!";
@@ -379,7 +285,7 @@ class HeartEngine {
                         copyShareUrlBtn.textContent = origText;
                     }, 2000);
                 }).catch(() => {
-                    prompt("Скопируйте ссылку для телефона:", shareUrl);
+                    prompt("Ссылка на сайт:", shareUrl);
                 });
             });
         }
