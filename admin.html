@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Панель Администратора — От Салиха 3D Heart</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-admin">
+
+    <!-- Main 3D Canvas Preview -->
+    <canvas id="heartCanvas"></canvas>
+
+    <!-- Header Overlay -->
+    <header class="app-header">
+        <div class="logo">
+            <span class="heart-icon">♥</span>
+            <span class="logo-title">От Салиха (Админка)</span>
+        </div>
+        <div class="subtitle">Управление 3D сердцем в реальном времени</div>
+    </header>
+
+    <!-- Floating Glassmorphic Control Panel -->
+    <main class="controls-wrapper" id="controlsPanel">
+        <button class="toggle-btn" id="togglePanelBtn" aria-label="Свернуть настройки">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 15l-5-5h10l-5 5z"/>
+            </svg>
+        </button>
+
+        <div class="controls-content">
+            <h2>Панель Администратора</h2>
+
+            <!-- Text input -->
+            <div class="control-group">
+                <label for="textInput">Текст надписи:</label>
+                <input type="text" id="textInput" value="i love you" maxlength="30" placeholder="Введите фразу...">
+            </div>
+
+            <!-- Color Palette Selector -->
+            <div class="control-group">
+                <label>Цветовая схема:</label>
+                <div class="color-presets">
+                    <button class="color-preset active" data-color="#ff4d8d" style="background: linear-gradient(135deg, #ff4d8d, #ff80ab);"></button>
+                    <button class="color-preset" data-color="#00f2fe" style="background: linear-gradient(135deg, #00c6ff, #00f2fe);"></button>
+                    <button class="color-preset" data-color="#ffb703" style="background: linear-gradient(135deg, #fb8500, #ffb703);"></button>
+                    <button class="color-preset" data-color="#a855f7" style="background: linear-gradient(135deg, #7c3aed, #a855f7);"></button>
+                    <button class="color-preset" data-color="rainbow" style="background: linear-gradient(135deg, #ff0000, #00ff00, #0000ff);"></button>
+                </div>
+            </div>
+
+            <!-- Speed & Density Sliders -->
+            <div class="control-group">
+                <label for="speedRange">Скорость вращения: <span id="speedVal">1.0x</span></label>
+                <input type="range" id="speedRange" min="0" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label for="densityRange">Плотность надписей: <span id="densityVal">450</span></label>
+                <input type="range" id="densityRange" min="150" max="800" step="50" value="450">
+            </div>
+
+            <!-- Toggles -->
+            <div class="toggles-grid">
+                <label class="toggle-label">
+                    <input type="checkbox" id="starsToggle" checked>
+                    <span class="custom-checkbox"></span>
+                    Звездный фон
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="audioToggle">
+                    <span class="custom-checkbox"></span>
+                    Звук пульса ♥
+                </label>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="buttons-group">
+                <button id="openViewerBtn" class="btn btn-primary">👁 Открыть окно зрителей</button>
+            </div>
+            <div class="status-badge">⚡ Авто-синхронизация со зрителями активна</div>
+        </div>
+    </main>
+
+    <!-- Footer / Interaction hint -->
+    <footer class="interaction-hint">
+        <span>⚙ Вы в режиме администратора | Изменения мгновенно видны зрителям</span>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

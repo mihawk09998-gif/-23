@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>От Салиха — 3D Heart (Режим Зрителя)</title>
+    <meta name="description" content="Интерактивное 3D сердце из светящихся надписей.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-viewer">
+
+    <!-- Main 3D Canvas -->
+    <canvas id="heartCanvas"></canvas>
+
+    <!-- Header Overlay -->
+    <header class="app-header">
+        <div class="logo">
+            <span class="heart-icon">♥</span>
+            <span class="logo-title">От Салиха</span>
+        </div>
+        <div class="subtitle">С любовью и кодом</div>
+    </header>
+
+    <!-- Footer / Interaction hint -->
+    <footer class="interaction-hint">
+        <span>💡 Вращайте мышью/пальцем | Колесико/Жест — масштаб</span>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
