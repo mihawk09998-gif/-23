@@ -3,22 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>Панель Администратора — От Салиха 3D Heart</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2.0">
-    <!-- PeerJS for Cross-Device WebRTC Live Sync -->
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- Three.js 3D Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body class="mode-admin">
 
-    <!-- Main 3D Canvas Preview -->
-    <canvas id="heartCanvas"></canvas>
+    <!-- Three.js Canvas Container -->
+    <div id="canvasContainer"></div>
 
     <!-- Header Overlay -->
     <header class="app-header">
@@ -85,18 +82,19 @@
 
             <!-- Action buttons -->
             <div class="buttons-group" style="flex-direction: column; gap: 8px;">
+                <button id="resetSpiralBtn" class="btn btn-secondary">🌀 Перезапустить воронку</button>
                 <button id="copyShareUrlBtn" class="btn btn-primary">🔗 Скопировать ссылку для телефона</button>
                 <button id="openViewerBtn" class="btn btn-secondary">👁 Открыть окно зрителей</button>
             </div>
-            <div class="status-badge" id="statusBadge">⚡ Инициализация онлайн-синхронизации...</div>
+            <div class="status-badge" id="statusBadge">⚡ Инициализация...</div>
         </div>
     </main>
 
     <!-- Footer / Interaction hint -->
-    <footer class="interaction-hint">
+    <footer class="interaction-hint" id="footerHint">
         <span>⚙ Вы в режиме администратора | Изменения мгновенно видны зрителям</span>
     </footer>
 
-    <script src="script.js?v=2.0"></script>
+    <script src="script.js"></script>
 </body>
 </html>
