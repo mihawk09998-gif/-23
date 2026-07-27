@@ -54,16 +54,16 @@ class ThreeHeartEngine {
         const width = window.innerWidth;
         const height = window.innerHeight;
 
-        // 1. Scene
+        // 1. Scene with transparent background
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x030008);
 
         // 2. Camera
         this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
         this.camera.position.set(0, 0, this.zoom);
 
-        // 3. Renderer
+        // 3. Transparent WebGL Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        this.renderer.setClearColor(0x000000, 0); // Transparent clear color
         this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -84,7 +84,25 @@ class ThreeHeartEngine {
         this.scene.add(this.spiralGroup);
     }
 
+    populateBgPattern() {
+        const bg = document.getElementById('bg-pattern');
+        if (!bg) return;
+
+        bg.innerHTML = '';
+        const rowHeight = 20;
+        const totalRows = Math.ceil(window.innerHeight / rowHeight) + 4;
+        const phrase = "LOVE YOU   ".repeat(30);
+
+        for (let r = 0; r < totalRows; r++) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'bg-row';
+            rowDiv.textContent = phrase;
+            bg.appendChild(rowDiv);
+        }
+    }
+
     async init() {
+        this.populateBgPattern();
         this.initStars();
         this.rebuildHeartPoints();
 
@@ -366,6 +384,7 @@ class ThreeHeartEngine {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
+        this.populateBgPattern();
     }
 
     async fetchServerState() {
