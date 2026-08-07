@@ -70,8 +70,10 @@ class ThreeHeartEngine {
         // 1. Scene with transparent background
         this.scene = new THREE.Scene();
 
-        // 2. Camera
-        this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+        // 2. Camera with responsive mobile FOV
+        const aspect = width / height;
+        const fov = aspect < 1 ? 72 : 60;
+        this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
         this.camera.position.set(0, 0, this.zoom);
 
         // 3. Transparent WebGL Renderer
@@ -665,8 +667,10 @@ class ThreeHeartEngine {
     onWindowResize() {
         const width = window.innerWidth;
         const height = window.innerHeight;
+        const aspect = width / height;
 
-        this.camera.aspect = width / height;
+        this.camera.aspect = aspect;
+        this.camera.fov = aspect < 1 ? 72 : 60;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
         this.populateBgPattern();
@@ -905,12 +909,14 @@ class ThreeHeartEngine {
         // 1. Smooth Camera Z Zoom
         this.camera.position.z += (this.zoom - this.camera.position.z) * 0.08;
 
-        // 2. Mouse Parallax Camera Tracking
+        // 2. Mouse Parallax Camera Tracking (Dampened on mobile to keep spiral centered)
         if (this.modeState === 'spiral') {
             this.mouseX += (this.targetMouseX - this.mouseX) * 0.05;
             this.mouseY += (this.targetMouseY - this.mouseY) * 0.05;
-            this.camera.position.x = this.mouseX * 12;
-            this.camera.position.y = this.mouseY * 12;
+            const isMobile = window.innerWidth < 600;
+            const mult = isMobile ? 3 : 12;
+            this.camera.position.x = this.mouseX * mult;
+            this.camera.position.y = this.mouseY * mult;
             this.camera.lookAt(0, 0, 0);
         } else {
             this.camera.position.x += (0 - this.camera.position.x) * 0.05;
