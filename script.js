@@ -10,6 +10,10 @@ class ThreeHeartEngine {
         this.warpStartTime = 0;
         this.warpDuration = 1800; // 1.8 seconds transition
 
+        // Access Control Flag: Gate Screen must be passed first
+        this.isAccessGranted = false;
+        this.currentUser = 'asema'; // 'asema' | 'malika'
+
         // Settings State
         this.displayText = "i love you";
         this.colorTheme = "#ff1493";
@@ -37,9 +41,18 @@ class ThreeHeartEngine {
         this.camera = null;
         this.renderer = null;
 
-        // Group objects
+        // THREE.Raycaster & Particle Burst System
+        this.raycaster = new THREE.Raycaster();
+        this.mouseVec = new THREE.Vector2();
+        this.planeZ0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        this.activeBursts = [];
+
+        // Group objects & Easter Egg elements
         this.spiralGroup = null;
         this.starParticles = null;
+        this.saturnRingGroup = null;
+        this.coreSphere = null;
+        this.coreHalo = null;
 
         // Spiral Elements Data Array
         this.spiralElements = [];
@@ -101,10 +114,159 @@ class ThreeHeartEngine {
         }
     }
 
+    initGateScreen() {
+        const gateScreen = document.getElementById('gateScreen');
+        const gateCard = document.getElementById('gateCard');
+        const gateInput = document.getElementById('gateInput');
+        const gateBtn = document.getElementById('gateBtn');
+        const gateError = document.getElementById('gateError');
+
+        if (this.isAdmin) {
+            this.isAccessGranted = true;
+            if (gateScreen) gateScreen.classList.add('hidden');
+            return;
+        }
+
+        if (!gateScreen || !gateInput || !gateBtn) return;
+
+        const handleVerification = (e) => {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
+            const val = (gateInput.value || '').toLowerCase().trim();
+
+            if (val === 'асема' || val === 'асем') {
+                this.currentUser = 'asema';
+                gateError.textContent = '';
+                gateScreen.classList.add('hidden');
+                this.isAccessGranted = true;
+            } else if (val === 'малика') {
+                this.currentUser = 'malika';
+                gateError.textContent = '';
+                gateScreen.classList.add('hidden');
+                this.isAccessGranted = true;
+            } else {
+                gateError.textContent = 'твоего имени нету в сердце салиха...';
+                gateCard.classList.remove('shake');
+                void gateCard.offsetWidth; // Reflow to restart shake animation
+                gateCard.classList.add('shake');
+            }
+        };
+
+        gateBtn.addEventListener('click', handleVerification);
+        gateInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleVerification(e);
+            }
+        });
+    }
+
+    initSaturnRing() {
+        this.saturnRingGroup = new THREE.Group();
+        this.saturnRingGroup.rotation.x = 0.35;
+        this.saturnRingGroup.rotation.z = 0.08;
+
+        const count = 800;
+        const items = ["I LOVE YOU", "I love you", "Te amo", "♥", "LOVE YOU", "♥", "Я тебя люблю"];
+        const colors = ["#ff1493", "#ff007f", "#ff4d8d", "#ff7396", "#ffffff", "#ff80ab"];
+
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.04;
+            const radius = 55 + Math.random() * 80;
+
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const y = (Math.random() - 0.5) * 2.4;
+
+            const text = items[i % items.length];
+            const color = colors[i % colors.length];
+            const texture = this.createGlowingTextTexture(text, color);
+            const mat = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                opacity: 0.88 + Math.random() * 0.12
+            });
+
+            const sprite = new THREE.Sprite(mat);
+            const scaleBase = text === "♥" ? 4.5 : 8.5;
+            const scaleVar = Math.random() * 3.0;
+            const sW = scaleBase + scaleVar;
+            sprite.scale.set(sW, sW * 0.25, 1);
+            sprite.position.set(x, y, z);
+
+            this.saturnRingGroup.add(sprite);
+        }
+
+        this.saturnRingGroup.visible = false;
+        this.spiralGroup.add(this.saturnRingGroup);
+    }
+
+    initCentralCore() {
+        const geo = new THREE.SphereGeometry(2.4, 32, 32);
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0xff1493,
+            wireframe: false
+        });
+        this.coreSphere = new THREE.Mesh(geo, mat);
+
+        const haloTex = this.createSparkTexture("#ff007f");
+        const haloMat = new THREE.SpriteMaterial({
+            map: haloTex,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            opacity: 0.95
+        });
+        this.coreHalo = new THREE.Sprite(haloMat);
+        this.coreHalo.scale.set(13, 13, 1);
+        this.coreSphere.add(this.coreHalo);
+
+        this.coreSphere.visible = false;
+        this.spiralGroup.add(this.coreSphere);
+    }
+
+    initPhotoModal() {
+        const photoModal = document.getElementById('photoModal');
+        const closePhotoBtn = document.getElementById('closePhotoBtn');
+
+        if (closePhotoBtn && photoModal) {
+            closePhotoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                photoModal.classList.remove('active');
+            });
+        }
+    }
+
+    openPhotoModal() {
+        const photoModal = document.getElementById('photoModal');
+        const photoImg = document.getElementById('photoImg');
+        const photoCaption = document.getElementById('photoCaption');
+
+        if (this.currentUser === 'malika') {
+            if (photoImg) photoImg.src = './фото2.jpg';
+            if (photoCaption) photoCaption.textContent = 'С днем рождения красавица ♥';
+        } else {
+            if (photoImg) photoImg.src = './photo.jpg';
+            if (photoCaption) photoCaption.textContent = 'больше фото не было, аххахаха';
+        }
+
+        if (photoModal) {
+            photoModal.classList.add('active');
+        }
+    }
+
     async init() {
+        this.initGateScreen();
+        this.initPhotoModal();
         this.populateBgPattern();
         this.initStars();
         this.rebuildHeartPoints();
+        this.initSaturnRing();
+        this.initCentralCore();
 
         window.addEventListener('resize', () => this.onWindowResize());
         this.bindEvents();
@@ -243,6 +405,108 @@ class ThreeHeartEngine {
         this.scene.add(this.starParticles);
     }
 
+    createSparkTexture(colorHex) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.35, colorHex || '#ff1493');
+        grad.addColorStop(1, 'rgba(255, 20, 147, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(32, 32, 32, 0, Math.PI * 2);
+        ctx.fill();
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    triggerParticleBurst(clientX, clientY) {
+        // Strict Condition: Trigger ONLY when access is granted AND mode is 3D Heart
+        if (!this.isAccessGranted || this.modeState !== 'heart') return;
+
+        // 1. Calculate normalized device coordinates [-1, 1]
+        this.mouseVec.x = (clientX / window.innerWidth) * 2 - 1;
+        this.mouseVec.y = -(clientY / window.innerHeight) * 2 + 1;
+
+        // 2. Raycast to Z=0 plane
+        this.raycaster.setFromCamera(this.mouseVec, this.camera);
+        const targetPoint = new THREE.Vector3();
+        this.raycaster.ray.intersectPlane(this.planeZ0, targetPoint);
+
+        // 3. Create particle burst group (20 sparkling particles)
+        const burstGroup = new THREE.Group();
+        burstGroup.position.copy(targetPoint);
+
+        const particleCount = 20;
+        const particles = [];
+        const colors = ["#ff1493", "#ff007f", "#ff4d8d", "#ffffff", "#ff80ab"];
+
+        for (let i = 0; i < particleCount; i++) {
+            const color = colors[i % colors.length];
+            const texture = this.createSparkTexture(color);
+            const material = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                opacity: 0.95
+            });
+
+            const sprite = new THREE.Sprite(material);
+            const initialScale = 2.2 + Math.random() * 2.2;
+            sprite.scale.set(initialScale, initialScale, 1);
+
+            // 3D Velocity outwards
+            const speed = 0.3 + Math.random() * 0.75;
+            const angle = Math.random() * Math.PI * 2;
+            const phi = (Math.random() - 0.5) * Math.PI * 0.8;
+
+            const vx = speed * Math.cos(angle) * Math.cos(phi);
+            const vy = speed * Math.sin(angle) * Math.cos(phi);
+            const vz = speed * Math.sin(phi);
+
+            sprite.position.set(0, 0, 0);
+            burstGroup.add(sprite);
+
+            particles.push({
+                sprite,
+                vx, vy, vz,
+                initialScale,
+                initialOpacity: 0.95
+            });
+        }
+
+        this.scene.add(burstGroup);
+        this.activeBursts.push({
+            group: burstGroup,
+            particles,
+            startTime: performance.now(),
+            duration: 1200 // 1.2s lifetime
+        });
+    }
+
+    checkCoreSphereClick(clientX, clientY) {
+        if (this.modeState !== 'heart' || !this.coreSphere || !this.coreSphere.visible) return false;
+
+        this.mouseVec.x = (clientX / window.innerWidth) * 2 - 1;
+        this.mouseVec.y = -(clientY / window.innerHeight) * 2 + 1;
+
+        this.raycaster.setFromCamera(this.mouseVec, this.camera);
+        const intersects = this.raycaster.intersectObject(this.coreSphere, true);
+
+        if (intersects.length > 0) {
+            this.openPhotoModal();
+            return true;
+        }
+        return false;
+    }
+
     bindEvents() {
         // Mouse Parallax & Drag Rotation
         window.addEventListener('mousemove', (e) => {
@@ -263,24 +527,31 @@ class ThreeHeartEngine {
 
         // Mouse Wheel Zoom for 3D Heart
         window.addEventListener('wheel', (e) => {
-            if (e.target.closest('#controlsPanel')) return;
+            if (e.target.closest('#controlsPanel') || e.target.closest('#photoModal')) return;
             e.preventDefault();
 
             this.zoom += e.deltaY * 0.05;
             this.zoom = Math.min(Math.max(25, this.zoom), 140);
         }, { passive: false });
 
-        // Click to trigger morphing into Heart
+        // Click handler: Start warp transition, open Photo Modal, or trigger Particle Burst
         window.addEventListener('click', (e) => {
-            if (e.target.closest('#controlsPanel')) return;
+            if (!this.isAccessGranted) return;
+            if (e.target.closest('#controlsPanel') || e.target.closest('#gateScreen') || e.target.closest('#photoModal')) return;
 
             if (this.modeState === 'spiral') {
                 this.startWarpTransition(performance.now());
+            } else if (this.modeState === 'heart') {
+                const hitCore = this.checkCoreSphereClick(e.clientX, e.clientY);
+                if (!hitCore) {
+                    this.triggerParticleBurst(e.clientX, e.clientY);
+                }
             }
         });
 
         window.addEventListener('mousedown', (e) => {
-            if (e.target.closest('#controlsPanel')) return;
+            if (!this.isAccessGranted) return;
+            if (e.target.closest('#controlsPanel') || e.target.closest('#gateScreen') || e.target.closest('#photoModal')) return;
             this.isDragging = true;
             this.lastMouseX = e.clientX;
             this.lastMouseY = e.clientY;
@@ -290,14 +561,20 @@ class ThreeHeartEngine {
             this.isDragging = false;
         });
 
-        // Touch handling with Pinch-Zoom for Mobile
+        // Touch handling with Pinch-Zoom & Particle Burst for Mobile
         let initialTouchDist = null;
 
         window.addEventListener('touchstart', (e) => {
-            if (e.target.closest('#controlsPanel')) return;
+            if (!this.isAccessGranted) return;
+            if (e.target.closest('#controlsPanel') || e.target.closest('#gateScreen') || e.target.closest('#photoModal')) return;
 
             if (this.modeState === 'spiral') {
                 this.startWarpTransition(performance.now());
+            } else if (this.modeState === 'heart' && e.touches.length === 1) {
+                const hitCore = this.checkCoreSphereClick(e.touches[0].clientX, e.touches[0].clientY);
+                if (!hitCore) {
+                    this.triggerParticleBurst(e.touches[0].clientX, e.touches[0].clientY);
+                }
             }
 
             if (e.touches.length === 1) {
@@ -314,6 +591,7 @@ class ThreeHeartEngine {
         });
 
         window.addEventListener('touchmove', (e) => {
+            if (!this.isAccessGranted) return;
             if (e.touches.length === 2 && initialTouchDist) {
                 const dist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
@@ -638,6 +916,9 @@ class ThreeHeartEngine {
         const zNear = 65;
 
         if (this.modeState === 'spiral') {
+            if (this.saturnRingGroup) this.saturnRingGroup.visible = false;
+            if (this.coreSphere) this.coreSphere.visible = false;
+
             this.spiralGroup.rotation.x = 0;
             this.spiralGroup.rotation.y = 0;
             this.spiralGroup.rotation.z += 0.005 * this.rotationSpeed;
@@ -662,6 +943,9 @@ class ThreeHeartEngine {
                 el.sprite.scale.set(scale * 8, scale * 2, 1);
             }
         } else if (this.modeState === 'warp') {
+            if (this.saturnRingGroup) this.saturnRingGroup.visible = false;
+            if (this.coreSphere) this.coreSphere.visible = false;
+
             const elapsed = timestamp - this.warpStartTime;
             const progress = Math.min(1, elapsed / this.warpDuration);
 
@@ -707,6 +991,18 @@ class ThreeHeartEngine {
                 this.spiralGroup.rotation.z = 0;
             }
         } else if (this.modeState === 'heart') {
+            // Show & Animate Secret Panoramic Text Carousel and Glowing Central Core
+            if (this.saturnRingGroup) {
+                this.saturnRingGroup.visible = true;
+                this.saturnRingGroup.rotation.y += 0.002;
+            }
+
+            if (this.coreSphere) {
+                this.coreSphere.visible = true;
+                const corePulse = 1 + Math.sin(timestamp * 0.005) * 0.18;
+                this.coreSphere.scale.set(corePulse, corePulse, corePulse);
+            }
+
             this.spiralGroup.rotation.x = this.heartRotationX;
             this.spiralGroup.rotation.y = this.heartRotationY;
             this.spiralGroup.rotation.z = 0;
@@ -724,6 +1020,38 @@ class ThreeHeartEngine {
             if (this.audioEnabled && beatPulse > 0.12 && timestamp - this.lastBeatTime > 600) {
                 this.playHeartbeatSound();
                 this.lastBeatTime = timestamp;
+            }
+        }
+
+        // Update & Render Active Particle Bursts with Memory Cleanup
+        for (let b = this.activeBursts.length - 1; b >= 0; b--) {
+            const burst = this.activeBursts[b];
+            const elapsed = timestamp - burst.startTime;
+            const progress = elapsed / burst.duration;
+
+            if (progress >= 1) {
+                // Disposal / Memory Cleanup: release textures & materials, remove group
+                burst.particles.forEach(p => {
+                    if (p.sprite.material.map) p.sprite.material.map.dispose();
+                    p.sprite.material.dispose();
+                });
+                this.scene.remove(burst.group);
+                this.activeBursts.splice(b, 1);
+            } else {
+                const fadeProgress = Math.pow(progress, 0.7);
+                burst.particles.forEach(p => {
+                    p.sprite.position.x += p.vx;
+                    p.sprite.position.y += p.vy;
+                    p.sprite.position.z += p.vz;
+
+                    p.vx *= 0.94;
+                    p.vy *= 0.94;
+                    p.vz *= 0.94;
+
+                    p.sprite.material.opacity = (1 - fadeProgress) * p.initialOpacity;
+                    const curScale = (1 - progress * 0.6) * p.initialScale;
+                    p.sprite.scale.set(curScale, curScale, 1);
+                });
             }
         }
 

@@ -15,6 +15,33 @@
 </head>
 <body class="mode-viewer">
 
+    <!-- Gate Screen / Access Control Overlay -->
+    <div id="gateScreen" class="gate-screen">
+        <div class="gate-card" id="gateCard">
+            <div class="gate-icon">🔐</div>
+            <h2>Проверка доступа</h2>
+            <p class="gate-subtitle">Для кого забилось это сердце?</p>
+
+            <div class="gate-input-group">
+                <input type="text" id="gateInput" placeholder="Введите ваше имя..." autocomplete="off">
+                <button id="gateBtn" class="btn btn-primary">Проверить</button>
+            </div>
+
+            <div id="gateError" class="gate-error"></div>
+        </div>
+    </div>
+
+    <!-- Photo Modal Easter Egg Overlay -->
+    <div id="photoModal" class="photo-modal">
+        <div class="photo-modal-card">
+            <button id="closePhotoBtn" class="photo-close-btn" aria-label="Закрыть">&times;</button>
+            <div class="photo-wrapper">
+                <img src="./photo.jpg" alt="Салих & Асема" id="photoImg">
+            </div>
+            <p class="photo-caption" id="photoCaption">больше фото не было, аххахаха</p>
+        </div>
+    </div>
+
     <!-- Background Layer of Repeating "LOVE YOU" Text -->
     <div id="bg-pattern"></div>
 
