@@ -139,11 +139,13 @@ class ThreeHeartEngine {
 
             if (val === 'асема' || val === 'асем') {
                 this.currentUser = 'asema';
+                this.preloadUserPhoto('asema');
                 gateError.textContent = '';
                 gateScreen.classList.add('hidden');
                 this.isAccessGranted = true;
             } else if (val === 'малика') {
                 this.currentUser = 'malika';
+                this.preloadUserPhoto('malika');
                 gateError.textContent = '';
                 gateScreen.classList.add('hidden');
                 this.isAccessGranted = true;
@@ -241,18 +243,23 @@ class ThreeHeartEngine {
         }
     }
 
-    openPhotoModal() {
-        const photoModal = document.getElementById('photoModal');
+    preloadUserPhoto(user) {
         const photoImg = document.getElementById('photoImg');
         const photoCaption = document.getElementById('photoCaption');
+        const userToUse = user || this.currentUser;
 
-        if (this.currentUser === 'malika') {
+        if (userToUse === 'malika') {
             if (photoImg) photoImg.src = './фото2.jpg';
             if (photoCaption) photoCaption.textContent = 'С днем рождения красавица ♥';
         } else {
             if (photoImg) photoImg.src = './photo.jpg';
             if (photoCaption) photoCaption.textContent = 'больше фото не было, аххахаха';
         }
+    }
+
+    openPhotoModal() {
+        const photoModal = document.getElementById('photoModal');
+        this.preloadUserPhoto(this.currentUser);
 
         if (photoModal) {
             photoModal.classList.add('active');
