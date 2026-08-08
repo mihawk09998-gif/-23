@@ -146,11 +146,10 @@ class ThreeHeartEngine {
                 gateScreen.classList.add('hidden');
                 this.isAccessGranted = true;
             } else if (val === 'малика') {
-                this.currentUser = 'malika';
-                this.preloadUserPhoto('malika');
-                gateError.textContent = '';
-                gateScreen.classList.add('hidden');
-                this.isAccessGranted = true;
+                gateError.textContent = 'день рождение 1 раз в году а попросить салиха сделать еще раз можно в любой день';
+                gateCard.classList.remove('shake');
+                void gateCard.offsetWidth; // Reflow to restart shake animation
+                gateCard.classList.add('shake');
             } else {
                 gateError.textContent = 'твоего имени нету в сердце салиха...';
                 gateCard.classList.remove('shake');
@@ -245,18 +244,12 @@ class ThreeHeartEngine {
         }
     }
 
-    preloadUserPhoto(user) {
+    preloadUserPhoto() {
         const photoImg = document.getElementById('photoImg');
         const photoCaption = document.getElementById('photoCaption');
-        const userToUse = user || this.currentUser;
 
-        if (userToUse === 'malika') {
-            if (photoImg) photoImg.src = './фото2.jpg';
-            if (photoCaption) photoCaption.textContent = 'С днем рождения красавица ♥';
-        } else {
-            if (photoImg) photoImg.src = './photo.jpg';
-            if (photoCaption) photoCaption.textContent = 'больше фото не было, аххахаха';
-        }
+        if (photoImg) photoImg.src = './photo.jpg';
+        if (photoCaption) photoCaption.textContent = 'больше фото не было, аххахаха';
     }
 
     openPhotoModal() {
