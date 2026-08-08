@@ -146,7 +146,7 @@ class ThreeHeartEngine {
                 gateScreen.classList.add('hidden');
                 this.isAccessGranted = true;
             } else if (val === 'малика') {
-                gateError.textContent = 'день рождение 1 раз в году а попросить салиха сделать еще раз можно в любой день';
+                gateError.textContent = 'день рождение всего один раз в году, а попросить салиха дать доступ можно в любой день';
                 gateCard.classList.remove('shake');
                 void gateCard.offsetWidth; // Reflow to restart shake animation
                 gateCard.classList.add('shake');
